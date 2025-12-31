@@ -1,0 +1,78 @@
+<%- include('../partials/head') %>
+</head>
+
+<body>
+  <%- include('../partials/nav') %>
+
+  <main class="container mx-auto mt-20 max-w-6xl">
+
+    <h2 class="text-5xl font-bold text-red-500 mb-10 text-center">
+      My Bookings
+    </h2>
+
+    <% if (bookings.length === 0) { %>
+      <p class="text-center text-2xl text-gray-600">
+        No bookings yet
+      </p>
+    <% } else { %>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <% bookings.forEach(booking => { %>
+
+          <div class="border rounded-lg p-6 shadow bg-white">
+
+            <img 
+              src="/<%= booking.home.photo %>" 
+              alt="<%= booking.home.houseName %>"
+              class="h-48 w-full object-cover rounded"
+            >
+
+            <h3 class="text-2xl font-bold mt-4">
+              <%= booking.home.houseName %>
+            </h3>
+
+            <p class="text-gray-700">📍 <%= booking.home.location %></p>
+
+            <p class="text-gray-700">
+              🗓 
+              <%= booking.checkIn.toDateString() %> 
+              - 
+              <%= booking.checkOut.toDateString() %>
+            </p>
+
+            <p class="font-bold text-red-500 text-xl mt-2">
+              ₹ <%= booking.totalPrice %>
+            </p>
+
+            <!-- STATUS + ACTION -->
+            <% if (booking.status === 'confirmed') { %>
+              <form 
+                action="/cancel-booking/<%= booking._id %>" 
+                method="POST"
+                class="mt-4"
+              >
+                <button
+                  type="submit"
+                  class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+                  onclick="return confirm('Are you sure you want to cancel this booking?')"
+                >
+                  Cancel Booking
+                </button>
+              </form>
+            <% } else { %>
+              <p class="mt-4 text-gray-500 font-semibold">
+                ❌ Booking Cancelled
+              </p>
+            <% } %>
+
+          </div>
+
+        <% }) %>
+      </div>
+
+    <% } %>
+
+  </main>
+
+</body>
+</html>

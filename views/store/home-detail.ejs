@@ -1,0 +1,72 @@
+<%- include('../partials/head') %>
+  </head>
+  <body>
+      <%- include('../partials/nav') %>
+      <main class="container mx-auto bg-white shadow-lg rounded-lg p-8 mt-10 max-w-6xl">
+          <h2 class="text-3xl text-red-500 font-bold text-center mb-6">
+              Details of <%= home.houseName %>
+          </h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="rounded-lg overflow-hidden">
+                  <img src="<%= home.photo %>" alt="<%= home.name %>" class="w-full h-96 object-cover">
+              </div>
+              
+              <div class="space-y-6">
+                  <div class="border-b pb-4">
+                      <h3 class="text-2xl font-semibold mb-2">Description</h3>
+                      <p class="text-gray-600"><%= home.description %></p>
+                  </div>
+
+                  <div class="border-b pb-4">
+                      <h3 class="text-2xl font-semibold mb-2">Location</h3>
+                      <p class="text-gray-600"><%= home.location %></p>
+                  </div>
+                  
+                  <div class="border-b pb-4">
+                      <h3 class="text-2xl font-semibold mb-2">Price</h3>
+                      <p class="text-green-600 text-xl font-bold">$<%= home.price %> / night</p>
+                  </div>
+                  
+                  <div class="border-b pb-4">
+                      <h3 class="text-2xl font-semibold mb-2">Rating</h3>
+                      <div class="flex items-center">
+                          <span class="text-yellow-400 text-xl">★</span>
+                          <span class="ml-2 text-lg"><%= home.rating %> / 5</span>
+                      </div>
+                  </div>
+                  <div class="mt-2">
+                    <%- include('../partials/favourite') %>
+                  </div>
+              </div>
+          </div>
+
+          <div class="mt-10 border-t pt-8">
+              <h3 class="text-2xl font-semibold mb-6 text-center text-gray-800">
+                  Ready to Reserve? Book Your Stay Today!
+              </h3>
+              
+              <form action="/book-home" method="POST" class="bg-gray-50 rounded-lg p-8 max-w-md mx-auto">
+                  <input type="hidden" name="homeId" value="<%= home._id %>">
+
+                  <div class="mb-6">
+                      <label class="block text-gray-700 font-semibold mb-2">Check-in Date</label>
+                      <input type="date" name="checkIn" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                  </div>
+
+                  <div class="mb-8">
+                      <label class="block text-gray-700 font-semibold mb-2">Check-out Date</label>
+                      <input type="date" name="checkOut" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                  </div>
+
+                  <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition duration-200 shadow-md">
+                      Reserve Now
+                  </button>
+              </form>
+          </div>
+
+
+
+      </main>
+  </body>
+</html>
