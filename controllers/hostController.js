@@ -2,7 +2,7 @@ const Home = require("../models/home");
 const cloudinary = require("../utils/cloudinary");
 const streamifier = require("streamifier");
 
-// Helper: upload buffer to Cloudinary
+// -------------------- Helper: Upload buffer to Cloudinary --------------------
 const uploadToCloudinary = (buffer) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -32,7 +32,7 @@ exports.postAddHome = async (req, res) => {
   try {
     const { houseName, price, location, rating, description } = req.body;
 
-    // Check mandatory fields
+    // Validate mandatory fields
     const errors = [];
     if (!houseName || !price || !location || !rating) {
       errors.push("All fields except description are required");
@@ -61,7 +61,7 @@ exports.postAddHome = async (req, res) => {
       rating,
       description,
       photo: result.secure_url,
-      cloudinary_id: result.public_id,
+      cloudinary_id: result.public_id
     });
 
     await home.save();
@@ -73,7 +73,7 @@ exports.postAddHome = async (req, res) => {
       currentPage: "addHome",
       editing: false,
       home: req.body,
-      errors: ["Something went wrong while adding the home"]
+      errors: ["Something went wrong while adding the home. Please check Cloudinary API keys."]
     });
   }
 };
@@ -85,7 +85,7 @@ exports.getHostHomes = async (req, res) => {
     res.render("host/host-home-list", {
       registeredHomes,
       pageTitle: "Host Home List",
-      currentPage: "host-homes",
+      currentPage: "host-homes"
     });
   } catch (err) {
     console.error(err);
@@ -120,7 +120,6 @@ exports.postEditHome = async (req, res) => {
 
     const { houseName, price, location, rating, description } = req.body;
 
-    // Update fields
     home.houseName = houseName;
     home.price = price;
     home.location = location;
@@ -128,7 +127,7 @@ exports.postEditHome = async (req, res) => {
     home.description = description;
 
     if (req.file) {
-      // Delete old image
+      // Delete old image from Cloudinary if exists
       if (home.cloudinary_id) {
         await cloudinary.uploader.destroy(home.cloudinary_id);
       }
@@ -147,7 +146,7 @@ exports.postEditHome = async (req, res) => {
       currentPage: "host-homes",
       editing: true,
       home: req.body,
-      errors: ["Something went wrong while updating the home"]
+      errors: ["Something went wrong while updating the home. Check Cloudinary API keys."]
     });
   }
 };
