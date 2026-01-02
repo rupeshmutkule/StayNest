@@ -7,7 +7,7 @@
     "tailwind:build": "tailwindcss -i ./views/input.css -o ./public/output.css",
     "tailwind:watch": "tailwindcss -i ./views/input.css -o ./public/output.css --watch",
     "build": "npm run tailwind:build",
-    "start": "node app.js"
+    "start": "nodemon app.js"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.8.0",
     "connect-mongodb-session": "^5.0.0",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
@@ -29,6 +30,7 @@
     "express-validator": "^7.2.1",
     "mongodb": "^6.10.0",
     "mongoose": "^8.12.1",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "streamifier": "^0.1.1"
   }
 }

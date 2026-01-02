@@ -2,8 +2,7 @@ const { check, validationResult } = require("express-validator");
 const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 
-/* ================= LOGIN ================= */
-
+/* ================= LOGIN PAGE ================= */
 exports.getLogin = (req, res) => {
   res.render("auth/login", {
     pageTitle: "Login",
@@ -13,8 +12,7 @@ exports.getLogin = (req, res) => {
   });
 };
 
-/* ================= SIGNUP ================= */
-
+/* ================= SIGNUP PAGE ================= */
 exports.getSignup = (req, res) => {
   res.render("auth/signup", {
     pageTitle: "Signup",
@@ -24,11 +22,13 @@ exports.getSignup = (req, res) => {
   });
 };
 
+/* ================= POST SIGNUP ================= */
 exports.postSignup = [
+  // Validation checks
   check("firstName")
     .trim()
     .isLength({ min: 2 })
-    .withMessage("First Name should be atleast 2 characters long")
+    .withMessage("First Name should be at least 2 characters long")
     .matches(/^[A-Za-z\s]+$/)
     .withMessage("First Name should contain only alphabets"),
 
@@ -43,15 +43,15 @@ exports.postSignup = [
 
   check("password")
     .isLength({ min: 8 })
-    .withMessage("Password should be atleast 8 characters long")
+    .withMessage("Password should be at least 8 characters long")
     .matches(/[A-Z]/)
-    .withMessage("Password should contain atleast one uppercase letter")
+    .withMessage("Password should contain at least one uppercase letter")
     .matches(/[a-z]/)
-    .withMessage("Password should contain atleast one lowercase letter")
+    .withMessage("Password should contain at least one lowercase letter")
     .matches(/[0-9]/)
-    .withMessage("Password should contain atleast one number")
+    .withMessage("Password should contain at least one number")
     .matches(/[!@&]/)
-    .withMessage("Password should contain atleast one special character")
+    .withMessage("Password should contain at least one special character")
     .trim(),
 
   check("confirmPassword")
@@ -73,8 +73,9 @@ exports.postSignup = [
     .notEmpty()
     .withMessage("Please accept the terms and conditions"),
 
+  // Signup controller
   async (req, res) => {
-    const { firstName, lastName, email, password, userType } = req.body;
+    const { firstName = "", lastName = "", email = "", password = "", userType = "" } = req.body || {};
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
@@ -82,7 +83,7 @@ exports.postSignup = [
         pageTitle: "Signup",
         currentPage: "signup",
         errors: errors.array().map(err => err.msg),
-        oldInput: { firstName, lastName, email, password, userType }
+        oldInput: { firstName, lastName, email, userType }
       });
     }
 
@@ -99,10 +100,10 @@ exports.postSignup = [
       await user.save();
       res.redirect("/login");
     } catch (err) {
-      res.status(422).render("auth/signup", {
+      return res.status(500).render("auth/signup", {
         pageTitle: "Signup",
         currentPage: "signup",
-        errors: [err.message],
+        errors: [err.message || "Something went wrong"],
         oldInput: { firstName, lastName, email, userType }
       });
     }
@@ -110,49 +111,67 @@ exports.postSignup = [
 ];
 
 /* ================= POST LOGIN ================= */
-
 exports.postLogin = async (req, res) => {
-  const { email, password } = req.body;
+  // Safe destructuring with fallback
+  const { email = "", password = "" } = req.body || {};
 
-  const user = await User.findOne({ email });
-  if (!user) {
+  if (!email || !password) {
     return res.status(422).render("auth/login", {
       pageTitle: "Login",
       currentPage: "login",
-      errors: ["User does not exist"],
+      errors: ["Please provide both email and password"],
       oldInput: { email }
     });
   }
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return res.status(422).render("auth/login", {
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(422).render("auth/login", {
+        pageTitle: "Login",
+        currentPage: "login",
+        errors: ["User does not exist"],
+        oldInput: { email }
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(422).render("auth/login", {
+        pageTitle: "Login",
+        currentPage: "login",
+        errors: ["Invalid password"],
+        oldInput: { email }
+      });
+    }
+
+    // Save session
+    req.session.isLoggedIn = true;
+    req.session.user = {
+      _id: user._id.toString(),
+      email: user.email,
+      userType: user.userType
+    };
+
+    req.session.save(err => {
+      if (err) console.error("Session save error:", err);
+      res.redirect("/");
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.status(500).render("auth/login", {
       pageTitle: "Login",
       currentPage: "login",
-      errors: ["Invalid Password"],
+      errors: [err.message || "Something went wrong"],
       oldInput: { email }
     });
   }
-
-  // ✅ SAVE ONLY SERIALIZABLE DATA
-  req.session.isLoggedIn = true;
-  req.session.user = {
-    _id: user._id.toString(),
-    email: user.email,
-    userType: user.userType
-  };
-
-  req.session.save(err => {
-    if (err) console.log("Session save error:", err);
-    res.redirect("/");
-  });
 };
 
 /* ================= LOGOUT ================= */
-
 exports.postLogout = (req, res) => {
   req.session.destroy(err => {
-    if (err) console.log(err);
+    if (err) console.error("Logout error:", err);
     res.redirect("/login");
   });
 };

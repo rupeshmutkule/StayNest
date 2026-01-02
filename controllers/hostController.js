@@ -1,6 +1,22 @@
 const Home = require("../models/home");
-const fs=require('fs');
-// GET - Add Home Page
+const cloudinary = require("../utils/cloudinary");
+const streamifier = require("streamifier");
+
+// Helper: upload buffer to Cloudinary
+async function uploadToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "staynest" },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+}
+
+// -------------------- GET ADD HOME --------------------
 exports.getAddHome = (req, res) => {
   res.render("host/edit-home", {
     pageTitle: "Add Home",
@@ -10,43 +26,43 @@ exports.getAddHome = (req, res) => {
   });
 };
 
-// POST - Add Home
+// -------------------- POST ADD HOME --------------------
 exports.postAddHome = async (req, res) => {
   try {
-    const { houseName, price, location, rating, description } = req.body;
-    console.log("Received file:", req.file);
-    const photo=req.file.path;
     if (!req.file) {
-      res.status(422).send("Not valid image format. Only JPG, JPEG, PNG allowed.");
+      return res.status(422).render("host/edit-home", {
+        pageTitle: "Add Home",
+        currentPage: "addHome",
+        editing: false,
+        home: req.body,
+        errors: ["Please upload an image (JPG, JPEG, PNG)"],
+      });
     }
-    
+
+    const { houseName, price, location, rating, description } = req.body;
+
+    // Upload image from memory buffer
+    const result = await uploadToCloudinary(req.file.buffer);
+
     const home = new Home({
       houseName,
       price,
       location,
       rating,
-      photo,
       description,
+      photo: result.secure_url,
+      cloudinary_id: result.public_id,
     });
 
     await home.save();
-    console.log("Home saved successfully");
-
-    // Redirect to host home list
     res.redirect("/host/host-home-list");
   } catch (err) {
-    console.log("Error while adding home:", err);
-    res.status(422).render("host/edit-home", {
-      pageTitle: "Add Home",
-      currentPage: "addHome",
-      editing: false,
-      home: req.body,
-      errors: [err.message],
-    });
+    console.error("Add Home Error:", err);
+    res.status(500).send("Internal Server Error");
   }
 };
 
-// GET - Host Home List
+// -------------------- GET HOST HOMES --------------------
 exports.getHostHomes = async (req, res) => {
   try {
     const registeredHomes = await Home.find();
@@ -56,77 +72,74 @@ exports.getHostHomes = async (req, res) => {
       currentPage: "host-homes",
     });
   } catch (err) {
-    console.log("Error fetching homes:", err);
+    console.error(err);
     res.redirect("/");
   }
 };
 
-// GET - Edit Home
+// -------------------- GET EDIT HOME --------------------
 exports.getEditHome = async (req, res) => {
-  const homeId = req.params.homeId;
-  const editing = req.query.editing === "true";
-
   try {
-    const home = await Home.findById(homeId);
+    const home = await Home.findById(req.params.homeId);
     if (!home) return res.redirect("/host/host-home-list");
 
     res.render("host/edit-home", {
       pageTitle: "Edit Home",
       currentPage: "host-homes",
-      editing,
+      editing: true,
       home,
     });
   } catch (err) {
-    console.log("Error fetching home:", err);
+    console.error(err);
     res.redirect("/host/host-home-list");
   }
 };
 
-// POST - Edit Home
+// -------------------- POST EDIT HOME --------------------
 exports.postEditHome = async (req, res) => {
   try {
-    const { id, houseName, price, location, rating, description } = req.body;
-
-    const numericPrice = Number(price.toString().replace(/,/g, ''));
-    const numericRating = Number(rating);
-
-    const home = await Home.findById(id);
+    const home = await Home.findById(req.body.id);
     if (!home) return res.redirect("/host/host-home-list");
 
-    home.houseName = houseName;
-    home.price = numericPrice;
-    home.location = location;
-    home.rating = numericRating;
-    home.description = description;
-    if(req.file){
-      fs.unlink(home.photo,(err)=>{
-        if(err){
-          console.log("Error while deleting old image:",err);
-        }
-      })
-       home.photo=req.file.path
-      
+    home.houseName = req.body.houseName;
+    home.price = req.body.price;
+    home.location = req.body.location;
+    home.rating = req.body.rating;
+    home.description = req.body.description;
+
+    if (req.file) {
+      // Delete old image
+      if (home.cloudinary_id) {
+        await cloudinary.uploader.destroy(home.cloudinary_id);
+      }
+
+      // Upload new image from buffer
+      const result = await uploadToCloudinary(req.file.buffer);
+      home.photo = result.secure_url;
+      home.cloudinary_id = result.public_id;
     }
 
     await home.save();
-    console.log("Home updated successfully");
-
     res.redirect("/host/host-home-list");
   } catch (err) {
-    console.log("Error updating home:", err);
-    res.redirect("/host/host-home-list");
+    console.error("Edit Home Error:", err);
+    res.status(500).send("Internal Server Error");
   }
 };
 
-// POST - Delete Home
+// -------------------- DELETE HOME --------------------
 exports.postDeleteHome = async (req, res) => {
-  const homeId = req.params.homeId;
   try {
-    await Home.findByIdAndDelete(homeId);
-    console.log("Home deleted successfully");
+    const home = await Home.findById(req.params.homeId);
+
+    if (home && home.cloudinary_id) {
+      await cloudinary.uploader.destroy(home.cloudinary_id);
+    }
+
+    await Home.findByIdAndDelete(req.params.homeId);
     res.redirect("/host/host-home-list");
   } catch (err) {
-    console.log("Error deleting home:", err);
-    res.redirect("/host/host-home-list");
+    console.error("Delete Home Error:", err);
+    res.status(500).send("Internal Server Error");
   }
 };
